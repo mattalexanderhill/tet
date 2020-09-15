@@ -20,11 +20,29 @@ const TICK_TIMERS_S: [f32; 9] = [
     0.6,
     0.2,
 ];
+const GAME_CONFIG: GameConfig = GameConfig::default();
 
 struct GameConfig {
     background: Color,
     foreground: Color,
     window: WindowDesciptor,
+    GAME_CONFIG.bounds_left: [f32; 4],
+    GAME_CONFIG.bounds_right: [f32; 4],
+    GAME_CONFIG.bounds_top: [f32; 4],
+    GAME_CONFIG.bounds_bottom: [f32; 4],
+    next: Rect,
+    scoreboard: Rect,
+}
+
+impl Rect {
+    fn pixels(left: f32, right: f32, top: f32, bottom: f32) -> Self {
+        Rect {
+            left: Val::Px(left),
+            right: Val::Px(right),
+            top: Val::Px(top),
+            bottom: Val::Px(bottom),
+        }
+    }
 }
 
 impl Default for GameConfig {
@@ -32,25 +50,19 @@ impl Default for GameConfig {
         GameConfig {
             background: Color::rgb(0.70, 0.45, 0.75),
             foreground: Color::rgb(0.75, 0.82, 0.92),
-            window: WindowDesciptor {
+            window: WindowDescriptor {
                 title: "Tet.rs",
-                width: 240,
+                width: 300,
                 height: 400,
-
-
-(200.0, 360.0);
-
-
-        WindowDescriptor {
-            title: "bevy".to_string(),
-            width: 1280,
-            height: 720,
-            vsync: true,
-            resizable: true,
-            mode: WindowMode::Windowed,
-            __non_exhaustive: (),
-        }
-            }
+                resizable: false,
+                ..Default::default()
+            },
+            GAME_CONFIG.bounds_left: Rect { left: 0.0, right: 20.0, top: 20.0, bottom: 380.0},
+            GAME_CONFIG.bounds_right: Rect { left: 200.0, right: 300.0, top: 20.0, bottom: 380.0},
+            GAME_CONFIG.bounds_top: Rect { left: 0.0, right: 300.0, top: 0.0, bottom: 20.0},
+            GAME_CONFIG.bounds_bottom: Rect { left: 0.0, right: 300.0, top: 380.0, bottom: 400.0},
+            next: Rect::pixels(220.0, 60.0, 60.0, 40.0),
+            scoreboard: Rect::pixels(220.0, 150.0, 60.0, 20.0),
         }
     }
 }
@@ -58,13 +70,11 @@ impl Default for GameConfig {
 struct GameTimer(Timer);
 
 fn main() {
-    let cfg = GameConfig::default();
-
     App::build()
-        .add_resource()
+        .add_resource(*GAME_CONFIG.window)
         .add_default_plugins()
         .add_resource(Scoreboard { score: 0 })
-        .add_resource(cfg.foreground)
+        .add_resource(GAME_CONFIG.foreground)
         .add_startup_system(setup_sys.system())
         .add_system(move_sys.system())
         .add_system(score_sys.system())
@@ -86,14 +96,14 @@ fn setup_sys(
     mut materials: ResMut<Assets<ColorMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
-    let cfg = GameConfig::default();
+    let GAME_CONFIG = GameConfig::default();
 
     commands
         .spawn(Camera2dComponents::default())
         .spawn(UiCameraComponents::default())
         .spawn(TextComponents {
             text: Text {
-                font: asset_server.load("assets/fonts/FiraSans-Bold.ttf").unwrap(),
+                font: asset_server.load("assets/fonts/OpenSans-Bold.ttf").unwrap(),
                 value: "Score:".to_string(),
                 style: TextStyle {
                     color: Color::rgb(0.2, 0.2, 0.8),
@@ -102,49 +112,70 @@ fn setup_sys(
             },
             style: Style {
                 position_type: PositionType::Absolute,
-                position: Rect {
-                    top: Val::Px(5.0),
-                    left: Val::Px(5.0),
-                    ..Default::default()
-                },
-                ..Default::default()
+                position: GAME_CONFIG.scoreboard,
             },
             ..Default::default()
         });
 
-    let wall_material = materials.add(cfg.background.into());
-    let wall_thickness = 10.0;
-    let bounds = Vec2::new(200.0, 360.0);
+    let background_material = materials.add(GAME_CONFIG.background.into());
 
     commands
         .spawn(SpriteComponents {
-            material: wall_material,
-            translation: Translation(Vec3::new(-bounds.x() / 2.0, 0.0, 0.0)),
-            sprite: Sprite::new(Vec2::new(wall_thickness, bounds.y() + wall_thickness)),
+            material: background_material,
+            translation: Translation(Vec3::new(
+                GAME_CONFIG.bounds_left.left,
+                GAME_CONFIG.bounds_left.top,
+                0.0
+            )),
+            sprite: Sprite::new(Vec2::new(
+                GAME_CONFIG.bounds_left.right - GAME_CONFIG.bounds_left.left,
+                GAME_CONFIG.bounds_left.top - GAME_CONFIG.bounds_left.bottom,
+            )),
             ..Default::default()
         })
         .with(Collider::Solid)
         .spawn(SpriteComponents {
-            material: wall_material,
-            translation: Translation(Vec3::new(bounds.x() / 2.0, 0.0, 0.0)),
-            sprite: Sprite::new(Vec2::new(wall_thickness, bounds.y() + wall_thickness)),
+            material: background_material,
+            translation: Translation(Vec3::new(
+                GAME_CONFIG.bounds_right.left,
+                GAME_CONFIG.bounds_right.top,
+                0.0
+            )),
+            sprite: Sprite::new(Vec2::new(
+                GAME_CONFIG.bounds_right.right - GAME_CONFIG.bounds_right.left,
+                GAME_CONFIG.bounds_right.top - GAME_CONFIG.bounds_right.bottom,
+            )),
             ..Default::default()
         })
         .with(Collider::Solid)
         .spawn(SpriteComponents {
-            material: wall_material,
-            translation: Translation(Vec3::new(0.0, -bounds.y() / 2.0, 0.0)),
-            sprite: Sprite::new(Vec2::new(bounds.x() + wall_thickness, wall_thickness)),
+            material: background_material,
+            translation: Translation(Vec3::new(
+                GAME_CONFIG.bounds_top.left,
+                GAME_CONFIG.bounds_top.top,
+                0.0
+            )),
+            sprite: Sprite::new(Vec2::new(
+                GAME_CONFIG.bounds_top.right - GAME_CONFIG.bounds_top.left,
+                GAME_CONFIG.bounds_top.top - GAME_CONFIG.bounds_top.bottom,
+            )),
             ..Default::default()
         })
         .with(Collider::Solid)
         .spawn(SpriteComponents {
-            material: wall_material,
-            translation: Translation(Vec3::new(0.0, bounds.y() / 2.0, 0.0)),
-            sprite: Sprite::new(Vec2::new(bounds.x() + wall_thickness, wall_thickness)),
+            material: background_material,
+            translation: Translation(Vec3::new(
+                GAME_CONFIG.bounds_bottom.left,
+                GAME_CONFIG.bounds_bottom.top,
+                0.0
+            )),
+            sprite: Sprite::new(Vec2::new(
+                GAME_CONFIG.bounds_bottom.right - GAME_CONFIG.bounds_bottom.left,
+                GAME_CONFIG.bounds_bottom.top - GAME_CONFIG.bounds_bottom.bottom,
+            )),
             ..Default::default()
         })
-        .with(Collider::Solid);
+        .with(Collider::Solid)
 }
 
 fn move_sys(
@@ -163,9 +194,8 @@ fn move_sys(
         }
 
         *translation.0.x_mut() += direction * BLOCK_WIDTH;
-
-        // bound the paddle within the walls
         *translation.0.x_mut() = f32::max(-380.0, f32::min(380.0, translation.0.x()));
+
     }
 }
 
